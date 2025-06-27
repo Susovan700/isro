@@ -1,0 +1,49 @@
+/* page.css */
+.app-container {
+  display: flex;
+  min-height: 100vh;
+  position: relative;
+}
+
+.main-content {
+  flex: 1;
+  transition: margin-left 0.3s ease;
+  /* Initial state matches open sidebar */
+  margin-left: 240px;
+  width: calc(100% - 240px);
+  /* Prevent any overflow issues */
+  overflow: hidden;
+}
+
+.sidebar-container.closed ~ .main-content {
+  margin-left: 80px;
+  width: calc(100% - 80px);
+}
+
+/* Fix for potential black border issue */
+.main-content,
+.main {
+  border: none;
+  outline: none;
+  box-shadow: none;
+  background-color: white;
+}
+
+* {
+  padding: 0;
+  margin: 0;
+  box-sizing: border-box;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .main-content {
+    margin-left: 0;
+    width: 100%;
+  }
+  
+  .sidebar-container.closed ~ .main-content {
+    margin-left: 0;
+    width: 100%;
+  }
+}
