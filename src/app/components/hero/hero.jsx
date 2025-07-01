@@ -1,6 +1,6 @@
 "use client";
 import "./hero.css";
-import { useContext } from "react";
+import { useContext, useState, useRef } from "react";
 import { Context } from "../../context/Context";
 
 export default function Hero() {
@@ -14,11 +14,82 @@ export default function Hero() {
     setInput,
   } = useContext(Context);
 
+  const [uploadedFiles, setUploadedFiles] = useState([]);
+  const [previewURLs, setPreviewURLs] = useState([]);
+  const [listening, setListening] = useState(false);
+  const [voiceText, setVoiceText] = useState("");
+  const [showVoiceBox, setShowVoiceBox] = useState(false);
+  const recognitionRef = useRef(null);
+
+  const handleFileUpload = (e) => {
+    const files = Array.from(e.target.files);
+    const previews = files.map((f) =>
+      f.type.startsWith("image/") ? URL.createObjectURL(f) : null
+    );
+    setUploadedFiles((p) => [...p, ...files]);
+    setPreviewURLs((p) => [...p, ...previews]);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!input.trim()) return;
+    const fd = new FormData();
+    fd.append("prompt", input.trim());
+    uploadedFiles.forEach((f) => fd.append("files", f));
+    setInput("");
+    setUploadedFiles([]);
+    setPreviewURLs([]);
+    await onSent(uploadedFiles.length ? fd : input.trim());
+  };
 
-    await onSent(input);
+  const handleVoiceInput = () => {
+    const SpeechRecognition =
+      window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert("Speech recognition not supported");
+      return;
+    }
+    if (!recognitionRef.current) {
+      const r = new SpeechRecognition();
+      r.lang = "en-US";
+      r.interimResults = false;
+      r.maxAlternatives = 1;
+      r.onstart = () => {
+        setListening(true);
+        setVoiceText("");
+        setShowVoiceBox(true);
+      };
+      r.onend = () => setListening(false);
+      r.onresult = (e) => {
+        const t = e.results[0][0].transcript;
+        setVoiceText(t);
+      };
+      r.onerror = () => {
+        setListening(false);
+        setShowVoiceBox(false);
+      };
+      recognitionRef.current = r;
+    }
+    recognitionRef.current.start();
+  };
+
+  const handleVoiceCancel = () => {
+    recognitionRef.current && recognitionRef.current.stop();
+    setListening(false);
+    setVoiceText("");
+    setShowVoiceBox(false);
+  };
+
+  const handleVoiceConfirm = async () => {
+    if (!voiceText.trim()) {
+      handleVoiceCancel();
+      return;
+    }
+    setShowVoiceBox(false);
+    setListening(false);
+    setInput("");
+    await onSent(voiceText.trim());
+    setVoiceText("");
   };
 
   return (
@@ -42,7 +113,9 @@ export default function Hero() {
               <div
                 className="card"
                 onClick={() =>
-                  setInput("Suggest beautiful places to see on an upcoming road trip")
+                  setInput(
+                    "Suggest beautiful places to see on an upcoming road trip"
+                  )
                 }
               >
                 <p>Suggest beautiful places to see on an upcoming road trip</p>
@@ -76,25 +149,102 @@ export default function Hero() {
             </div>
           </>
         ) : (
-          <div className="response">
-            <h2>Response:</h2>
-            {loading ? <p>Loading...</p> : <p>{resultData}</p>}
+          <div className="result">
+            <div className="result-title">
+              <img src="./user_icon.png" alt="User icon" />
+              <p className="user-prompt">
+                <b>{recentPrompt}</b>
+              </p>
+            </div>
+
+            <div className="result-data">
+              <img src="./gemini_icon.png" alt="Gemini icon" />
+              {loading ? (
+                <div className="loading">
+                  <hr />
+                  <hr />
+                  <hr />
+                </div>
+              ) : (
+                <p
+                  className="response-text"
+                  dangerouslySetInnerHTML={{ __html: resultData }}
+                ></p>
+              )}
+            </div>
+          </div>
+        )}
+
+        {showVoiceBox && (
+          <div className="voice-box">
+            <div className={`voice-visual ${listening ? "anim" : ""}`}>
+              <span></span>
+              <span></span>
+              <span></span>
+              <span></span>
+              <span></span>
+            </div>
+            <p className="voice-text">Listening...</p>
+            <button className="voice-cancel" onClick={handleVoiceCancel}>
+              ✖
+            </button>
+            <button className="voice-confirm" onClick={handleVoiceConfirm}>
+              ✔
+            </button>
           </div>
         )}
 
         <div className="main-bottom">
+          {uploadedFiles.length > 0 && (
+            <div className="preview-area">
+              {uploadedFiles.map((f, i) => (
+                <div className="preview-item" key={i}>
+                  {previewURLs[i] ? (
+                    <img
+                      src={previewURLs[i]}
+                      alt="Preview"
+                      className="preview-image"
+                    />
+                  ) : (
+                    <span className="file-name">{f.name}</span>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} className="search-box">
             <input
               type="text"
               onChange={(e) => setInput(e.target.value)}
               value={input}
-              placeholder="Enter a prompt here.."
+              placeholder="Enter a prompt here..."
               disabled={loading}
               required
             />
             <div>
-              <img src="/gallery_icon.png" alt="Gallery icon" />
-              <img src="/mic_icon.png" alt="Mic icon" />
+              <input
+                id="fileUpload"
+                type="file"
+                multiple
+                accept="image/*,.pdf,.doc,.docx"
+                style={{ display: "none" }}
+                onChange={handleFileUpload}
+              />
+
+              <img
+                src="/gallery_icon.png"
+                alt="Gallery icon"
+                style={{ cursor: "pointer" }}
+                onClick={() => document.getElementById("fileUpload").click()}
+              />
+              <div
+                className="mic-wrapper"
+                onClick={handleVoiceInput}
+                style={{ cursor: "pointer" }}
+              >
+                <img src="/mic_icon.png" alt="Mic icon" />
+              </div>
               <button type="submit" disabled={loading}>
                 <img id="send" src="/send_icon.png" alt="Send icon" />
               </button>

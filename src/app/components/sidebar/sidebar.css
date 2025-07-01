@@ -193,5 +193,80 @@
 p {
     margin: 0;
     color: inherit;
-    white-space: nowrap;
+}
+
+@media screen and (max-width: 768px) {
+  .sidebar-container {
+    width: 70px;
+    padding: 20px 10px;
+  }
+
+  .sidebar-container.closed {
+    width: 0;
+    padding: 0;
+    overflow: hidden;
+  }
+
+  .sidebar-container.closed .sidebar-icon {
+    display: none;
+  }
+
+  .sidebar-container .new-chat,
+  .recent-title,
+  .recent-entry p,
+  .bottom-item p {
+    display: none;
+  }
+
+  .sidebar-container .recent-entry,
+  .sidebar-container .bottom-item {
+    justify-content: center;
+  }
+
+  .sidebar-icon {
+    margin-left: 0;
+  }
+
+  .new-chat {
+    justify-content: center;
+    padding: 0;
+    width: 100%;
+    height: 50px;
+  }
+
+  .plus-container {
+    width: 100%;
+    height: 100%;
+  }
+}
+
+@media screen and (max-width: 480px) {
+  .sidebar-container {
+    width: 100%;
+    height: auto;
+    position: relative;
+    flex-direction: row;
+    padding: 10px;
+    min-height: unset;
+  }
+
+  .top, .bottom {
+    flex-direction: row;
+    justify-content: space-around;
+    width: 100%;
+  }
+
+  .recent, .new-chat {
+    display: none;
+  }
+
+  .bottom-item, .recent-entry {
+    width: auto;
+    height: auto;
+    padding: 5px;
+  }
+
+  .sidebar-container.closed {
+    display: none;
+  }
 }
