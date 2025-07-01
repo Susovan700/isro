@@ -1,6 +1,7 @@
 "use client";
 import { createContext, useState } from "react";
 import runChat from "../config/gemini";
+
 export const Context = createContext();
 
 const ContextProvider = ({ children }) => {
@@ -31,13 +32,20 @@ const ContextProvider = ({ children }) => {
       setLoading(true);
       setShowResult(true);
       setResultData("");
-      setRecentPrompt(prompt);
-      setPrevPrompts((prev) => [...prev, prompt]);
 
-      const raw = await runChat(prompt);
+      setRecentPrompt(prompt);
+      setInput(""); // ⬅️ Clear input instantly when sending
+
+      let response = await runChat(prompt);
+
+      // ⬅️ Prevent duplicate prompts in Recent
+      setPrevPrompts((prev) =>
+        prev.includes(prompt) ? prev : [...prev, prompt]
+      );
+
+      const raw = response;
 
       const bulbIcon = `<img src="/bulb_icon.png" alt="Bulb" class="bulb-glow" />`;
-
       const boldFormatted = raw
         .split("**")
         .map((chunk, i) => (i % 2 ? `<b>${chunk}</b>` : chunk))
@@ -45,9 +53,6 @@ const ContextProvider = ({ children }) => {
 
       const withBreaks = boldFormatted.split("*").join("<br>");
       const finalResponse = withBreaks.split("###").join(bulbIcon);
-      const lines = raw.split("\n").filter(Boolean);
-      const bulletHTML =
-        `<ul>` + lines.map((line) => `<li>${line}</li>`).join("") + `</ul>`;
 
       finalResponse.split(" ").forEach((word, i) => delayPara(i, word + " "));
 
@@ -61,9 +66,11 @@ const ContextProvider = ({ children }) => {
 
   const contextValue = {
     history,
+    setHistory,
     prevPrompts,
     onSent,
     recentPrompt,
+    setRecentPrompt,
     showResult,
     loading,
     resultData,

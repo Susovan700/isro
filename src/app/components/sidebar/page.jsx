@@ -1,11 +1,19 @@
 "use client";
 import { useState, useContext } from "react";
 import "./sidebar.css";
-import { Context } from "../../context/Context"; // <-- Make sure this path is correct
+import { Context } from "../../context/Context"; // Adjust if needed
 
 export default function Sidebar() {
   const [isOpen, setIsOpen] = useState(false);
-  const { onSent, prevPrompts, setRecentPrompt,newChat} = useContext(Context);
+  const [showActivity, setShowActivity] = useState(false);
+
+  const {
+    onSent,
+    prevPrompts,
+    history,
+    setRecentPrompt,
+    newChat,
+  } = useContext(Context);
 
   const toggleSidebar = (e) => {
     if (e.currentTarget.className.includes("sidebar-icon")) {
@@ -16,6 +24,14 @@ export default function Sidebar() {
   const handlePromptClick = (prompt) => {
     setRecentPrompt(prompt);
     onSent(prompt);
+  };
+
+  const handleActivityClick = () => {
+    setShowActivity(true);
+  };
+
+  const handleRecentClick = () => {
+    setShowActivity(false);
   };
 
   return (
@@ -30,7 +46,7 @@ export default function Sidebar() {
           />
         </div>
 
-        <div onClick={()=>newChat()} className="new-chat">
+        <div onClick={() => newChat()} className="new-chat">
           <div className="plus-container">
             <img className="plus" src="/plus_icon.png" alt="New chat" />
           </div>
@@ -38,17 +54,37 @@ export default function Sidebar() {
         </div>
 
         <div className="recent">
-          <p className="recent-title">Recent</p>
-          {prevPrompts.map((item, index) => (
-            <div
-              className="recent-entry"
-              key={index}
-              onClick={() => handlePromptClick(item)}
-            >
-              <img className="message" src="/message_icon.png" alt="Message" />
-              <p>{item.slice(0, 18)}...</p>
-            </div>
-          ))}
+          <p
+            className="recent-title"
+            onClick={handleRecentClick}
+            style={{ cursor: "pointer" }}
+          >
+            {showActivity ? "Back to Recent" : "Recent"}
+          </p>
+
+          {!showActivity &&
+            prevPrompts.map((item, index) => (
+              <div
+                className="recent-entry"
+                key={index}
+                onClick={() => handlePromptClick(item)}
+              >
+                <img className="message" src="/message_icon.png" alt="Message" />
+                <p>{item.slice(0, 18)}...</p>
+              </div>
+            ))}
+
+          {showActivity &&
+            history.map((entry, index) => (
+              <div
+                className="recent-entry"
+                key={index}
+                onClick={() => handlePromptClick(entry.prompt)}
+              >
+                <img className="message" src="/history_icon.png" alt="History" />
+                <p>{entry.prompt.slice(0, 18)}...</p>
+              </div>
+            ))}
         </div>
       </div>
 
@@ -59,7 +95,7 @@ export default function Sidebar() {
           </div>
           <p>Help</p>
         </div>
-        <div className="bottom-item">
+        <div className="bottom-item" onClick={handleActivityClick}>
           <div className="icon-container">
             <img className="time" src="/history_icon.png" alt="Activity" />
           </div>

@@ -1,7 +1,8 @@
 "use client";
 import "./hero.css";
-import { useContext, useState, useRef } from "react";
+import { useContext, useState, useRef, useEffect } from "react";
 import { Context } from "../../context/Context";
+import Profile from "../profile/profile";
 
 export default function Hero() {
   const {
@@ -19,7 +20,20 @@ export default function Hero() {
   const [listening, setListening] = useState(false);
   const [voiceText, setVoiceText] = useState("");
   const [showVoiceBox, setShowVoiceBox] = useState(false);
+  const [showProfile, setShowProfile] = useState(false);
+
   const recognitionRef = useRef(null);
+
+  const profileRef = useRef(null);
+  useEffect(() => {
+    const handler = (e) => {
+      if (profileRef.current && !profileRef.current.contains(e.target)) {
+        setShowProfile(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
 
   const handleFileUpload = (e) => {
     const files = Array.from(e.target.files);
@@ -96,7 +110,15 @@ export default function Hero() {
     <div className="main">
       <div className="nav">
         <p>CHATGPT</p>
-        <img src="user_icon.png" alt="User icon" />
+        <div className="profile-wrapper" ref={profileRef}>
+          <img
+            src="/user_icon.png"
+            alt="User"
+            className="avatar"
+            onClick={() => setShowProfile((prev) => !prev)}
+          />
+          {showProfile && <Profile />}
+        </div>
       </div>
 
       <div className="main-container">
@@ -109,6 +131,7 @@ export default function Hero() {
               <p>How can I help you today...</p>
             </div>
 
+            {/* cards */}
             <div className="cards">
               <div
                 className="card"
@@ -151,14 +174,14 @@ export default function Hero() {
         ) : (
           <div className="result">
             <div className="result-title">
-              <img src="./user_icon.png" alt="User icon" />
+              <img src="/user_icon.png" alt="User icon" />
               <p className="user-prompt">
                 <b>{recentPrompt}</b>
               </p>
             </div>
 
             <div className="result-data">
-              <img src="./gemini_icon.png" alt="Gemini icon" />
+              <img src="/gemini_icon.png" alt="Gemini icon" />
               {loading ? (
                 <div className="loading">
                   <hr />
@@ -231,7 +254,6 @@ export default function Hero() {
                 style={{ display: "none" }}
                 onChange={handleFileUpload}
               />
-
               <img
                 src="/gallery_icon.png"
                 alt="Gallery icon"
