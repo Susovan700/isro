@@ -21,14 +21,44 @@ export default function Hero() {
   const [voiceText, setVoiceText] = useState("");
   const [showVoiceBox, setShowVoiceBox] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [showMenuDropdown, setShowMenuDropdown] = useState(false);
+  const [shareUrl, setShareUrl] = useState("");
+  const [linkCopied, setLinkCopied] = useState(false);
 
   const recognitionRef = useRef(null);
-
   const profileRef = useRef(null);
+  const shareModalRef = useRef(null);
+  const menuDropdownRef = useRef(null);
+
   useEffect(() => {
     const handler = (e) => {
       if (profileRef.current && !profileRef.current.contains(e.target)) {
         setShowProfile(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (shareModalRef.current && !shareModalRef.current.contains(e.target)) {
+        setShowShareModal(false);
+        setLinkCopied(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (
+        menuDropdownRef.current &&
+        !menuDropdownRef.current.contains(e.target)
+      ) {
+        setShowMenuDropdown(false);
       }
     };
     document.addEventListener("mousedown", handler);
@@ -54,6 +84,10 @@ export default function Hero() {
     setUploadedFiles([]);
     setPreviewURLs([]);
     await onSent(uploadedFiles.length ? fd : input.trim());
+  };
+  const handleFileDelete = (index) => {
+    setUploadedFiles((prev) => prev.filter((_, i) => i !== index));
+    setPreviewURLs((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleVoiceInput = () => {
@@ -106,20 +140,145 @@ export default function Hero() {
     setVoiceText("");
   };
 
+  const handleShare = () => {
+    // Use current URL instead of generating a new one
+    const currentUrl = window.location.href;
+    setShareUrl(currentUrl);
+    setShowShareModal(true);
+    setLinkCopied(false);
+  };
+
+  const handleCreateLink = async () => {
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 2000);
+    } catch (err) {
+      console.error("Failed to copy link:", err);
+      // Fallback for older browsers
+      const textArea = document.createElement("textarea");
+      textArea.value = shareUrl;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand("copy");
+      document.body.removeChild(textArea);
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 2000);
+    }
+  };
+
+  const handleNewChat = () => {
+    // Reload the page to start a new chat
+    window.location.reload();
+    setShowMenuDropdown(false);
+  };
+
+  const handleMenuToggle = () => {
+    setShowMenuDropdown((prev) => !prev);
+  };
+
   return (
     <div className="main">
       <div className="nav">
         <p>CHATGPT</p>
-        <div className="profile-wrapper" ref={profileRef}>
-          <img
-            src="/user_icon.png"
-            alt="User"
-            className="avatar"
-            onClick={() => setShowProfile((prev) => !prev)}
-          />
-          {showProfile && <Profile />}
+        <div className="nav-actions">
+          {/* Share Button */}
+          <div className="share-wrapper">
+            <button className="share-btn" onClick={handleShare}>
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+              >
+                <path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z" />
+              </svg>
+              Share
+            </button>
+
+            {/* Menu Dropdown */}
+            <div className="menu-dropdown-wrapper" ref={menuDropdownRef}>
+              <button className="menu-dots" onClick={handleMenuToggle}>
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                >
+                  <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z" />
+                </svg>
+              </button>
+
+              {showMenuDropdown && (
+                <div className="menu-dropdown">
+                  <button className="menu-item" onClick={handleNewChat}>
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="currentColor"
+                    >
+                      <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                    </svg>
+                    New Chat
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Profile Section */}
+          <div className="profile-wrapper" ref={profileRef}>
+            <img
+              src="/user_icon.png"
+              alt="User"
+              className="avatar"
+              onClick={() => setShowProfile((prev) => !prev)}
+            />
+            {showProfile && <Profile />}
+          </div>
         </div>
       </div>
+
+      {/* Share Modal */}
+      {showShareModal && (
+        <div className="share-modal-overlay">
+          <div className="share-modal" ref={shareModalRef}>
+            <div className="share-modal-header">
+              <h3>Share public link to chat</h3>
+              <button
+                className="share-modal-close"
+                onClick={() => {
+                  setShowShareModal(false);
+                  setLinkCopied(false);
+                }}
+              >
+                ✕
+              </button>
+            </div>
+            <div className="share-modal-content">
+              <p className="share-description">
+                Your name, custom instructions, and any messages you add after
+                sharing stay private.
+              </p>
+              <div className="share-url-container">
+                <input
+                  type="text"
+                  value={shareUrl}
+                  readOnly
+                  className="share-url-input"
+                />
+                <button
+                  className={`create-link-btn ${linkCopied ? "copied" : ""}`}
+                  onClick={handleCreateLink}
+                >
+                  🔗 {linkCopied ? "Copied!" : "Create link"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="main-container">
         {!showResult ? (
@@ -222,6 +381,13 @@ export default function Hero() {
             <div className="preview-area">
               {uploadedFiles.map((f, i) => (
                 <div className="preview-item" key={i}>
+                  <button
+                    className="delete-file-btn"
+                    onClick={() => handleFileDelete(i)}
+                    aria-label="Delete file"
+                  >
+                    ✕
+                  </button>
                   {previewURLs[i] ? (
                     <img
                       src={previewURLs[i]}

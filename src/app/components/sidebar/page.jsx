@@ -89,24 +89,6 @@ export default function Sidebar() {
       </div>
 
       <div className="bottom">
-        <div className="bottom-item">
-          <div className="icon-container">
-            <img className="help" src="/question_icon.png" alt="Help" />
-          </div>
-          <p>Help</p>
-        </div>
-        <div className="bottom-item" onClick={handleActivityClick}>
-          <div className="icon-container">
-            <img className="time" src="/history_icon.png" alt="Activity" />
-          </div>
-          <p>Activity</p>
-        </div>
-        <div className="bottom-item">
-          <div className="icon-container">
-            <img className="setting" src="/setting_icon.png" alt="Settings" />
-          </div>
-          <p>Settings</p>
-        </div>
       </div>
     </div>
   );
