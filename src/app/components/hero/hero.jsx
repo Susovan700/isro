@@ -25,11 +25,13 @@ export default function Hero() {
   const [showMenuDropdown, setShowMenuDropdown] = useState(false);
   const [shareUrl, setShareUrl] = useState("");
   const [linkCopied, setLinkCopied] = useState(false);
+  const [pasteNotification, setPasteNotification] = useState(false);
 
   const recognitionRef = useRef(null);
   const profileRef = useRef(null);
   const shareModalRef = useRef(null);
   const menuDropdownRef = useRef(null);
+  const inputRef = useRef(null);
 
   useEffect(() => {
     const handler = (e) => {
@@ -65,26 +67,134 @@ export default function Hero() {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
+  // Add paste event listener
+  useEffect(() => {
+    const handlePaste = async (e) => {
+      // Only handle paste if we're not in an input field or if we're in our specific input
+      const isInOurInput = e.target === inputRef.current;
+      const isInTextInput = e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA';
+      
+      if (!isInOurInput && isInTextInput) {
+        return; // Let other inputs handle their own paste events
+      }
+
+      const clipboardData = e.clipboardData || window.clipboardData;
+      const items = clipboardData.items;
+
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        
+        // Check if the item is an image
+        if (item.type.indexOf('image') === 0) {
+          e.preventDefault(); // Prevent default paste behavior
+          
+          const blob = item.getAsFile();
+          if (blob) {
+            // Create a File object from the blob
+            const timestamp = new Date().getTime();
+            const file = new File([blob], `pasted-image-${timestamp}.png`, {
+              type: blob.type,
+            });
+            
+            // Add the file to uploaded files
+            const previewUrl = URL.createObjectURL(file);
+            setUploadedFiles((prev) => [...prev, file]);
+            setPreviewURLs((prev) => [...prev, previewUrl]);
+            
+            // Show notification
+            setPasteNotification(true);
+            setTimeout(() => setPasteNotification(false), 2000);
+            
+            // Focus on input if not already focused
+            if (inputRef.current) {
+              inputRef.current.focus();
+            }
+          }
+          break;
+        }
+      }
+    };
+
+    // Add event listener to document
+    document.addEventListener('paste', handlePaste);
+    
+    // Cleanup
+    return () => {
+      document.removeEventListener('paste', handlePaste);
+    };
+  }, []);
+
   const handleFileUpload = (e) => {
     const files = Array.from(e.target.files);
-    const previews = files.map((f) =>
-      f.type.startsWith("image/") ? URL.createObjectURL(f) : null
-    );
-    setUploadedFiles((p) => [...p, ...files]);
-    setPreviewURLs((p) => [...p, ...previews]);
+    
+    // Validate file types
+    const allowedTypes = [
+      'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp',
+      'application/pdf',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // .docx
+      'application/msword', // .doc
+      'text/plain'
+    ];
+    
+    const validFiles = files.filter(file => {
+      if (!allowedTypes.includes(file.type)) {
+        alert(`File type ${file.type} is not supported. Please upload images, PDFs, DOC, DOCX, or text files.`);
+        return false;
+      }
+      return true;
+    });
+    
+    if (validFiles.length === 0) return;
+    
+    // Create previews for images, show file icons for documents
+    const previews = validFiles.map((file) => {
+      if (file.type.startsWith("image/")) {
+        return URL.createObjectURL(file);
+      }
+      return null; // For documents, we'll show file name instead
+    });
+    
+    setUploadedFiles((prev) => [...prev, ...validFiles]);
+    setPreviewURLs((prev) => [...prev, ...previews]);
+    
+    // Clear the input to allow uploading the same file again
+    e.target.value = '';
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!input.trim()) return;
-    const fd = new FormData();
-    fd.append("prompt", input.trim());
-    uploadedFiles.forEach((f) => fd.append("files", f));
-    setInput("");
-    setUploadedFiles([]);
-    setPreviewURLs([]);
-    await onSent(uploadedFiles.length ? fd : input.trim());
+    
+    // Check if we have either text input or files
+    if (!input.trim() && uploadedFiles.length === 0) {
+      alert("Please enter a message or upload files.");
+      return;
+    }
+    
+    try {
+      // If we have files, create FormData
+      if (uploadedFiles.length > 0) {
+        const formData = new FormData();
+        formData.append("prompt", input.trim() || "Please analyze these files.");
+        uploadedFiles.forEach((file) => {
+          formData.append("files", file);
+        });
+        
+        // Clear the form
+        setInput("");
+        setUploadedFiles([]);
+        setPreviewURLs([]);
+        
+        await onSent(formData);
+      } else {
+        // Text only
+        await onSent(input.trim());
+      }
+    } catch (error) {
+      console.error("Error submitting:", error);
+      alert("An error occurred while sending your message. Please try again.");
+    }
   };
+
   const handleFileDelete = (index) => {
     setUploadedFiles((prev) => prev.filter((_, i) => i !== index));
     setPreviewURLs((prev) => prev.filter((_, i) => i !== index));
@@ -94,7 +204,7 @@ export default function Hero() {
     const SpeechRecognition =
       window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
-      alert("Speech recognition not supported");
+      alert("Speech recognition not supported in this browser.");
       return;
     }
     if (!recognitionRef.current) {
@@ -112,7 +222,8 @@ export default function Hero() {
         const t = e.results[0][0].transcript;
         setVoiceText(t);
       };
-      r.onerror = () => {
+      r.onerror = (e) => {
+        console.error("Speech recognition error:", e.error);
         setListening(false);
         setShowVoiceBox(false);
       };
@@ -122,7 +233,9 @@ export default function Hero() {
   };
 
   const handleVoiceCancel = () => {
-    recognitionRef.current && recognitionRef.current.stop();
+    if (recognitionRef.current) {
+      recognitionRef.current.stop();
+    }
     setListening(false);
     setVoiceText("");
     setShowVoiceBox(false);
@@ -141,7 +254,6 @@ export default function Hero() {
   };
 
   const handleShare = () => {
-    // Use current URL instead of generating a new one
     const currentUrl = window.location.href;
     setShareUrl(currentUrl);
     setShowShareModal(true);
@@ -168,13 +280,20 @@ export default function Hero() {
   };
 
   const handleNewChat = () => {
-    // Reload the page to start a new chat
     window.location.reload();
     setShowMenuDropdown(false);
   };
 
   const handleMenuToggle = () => {
     setShowMenuDropdown((prev) => !prev);
+  };
+
+  // Helper function to get file icon based on type
+  const getFileIcon = (fileType) => {
+    if (fileType.includes('pdf')) return '📄';
+    if (fileType.includes('word') || fileType.includes('document')) return '📝';
+    if (fileType.includes('text')) return '📰';
+    return '📁';
   };
 
   return (
@@ -239,6 +358,18 @@ export default function Hero() {
           </div>
         </div>
       </div>
+
+      {/* Paste Notification */}
+      {pasteNotification && (
+        <div className="paste-notification">
+          <div className="paste-notification-content">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+            </svg>
+            Image pasted successfully!
+          </div>
+        </div>
+      )}
 
       {/* Share Modal */}
       {showShareModal && (
@@ -366,7 +497,9 @@ export default function Hero() {
               <span></span>
               <span></span>
             </div>
-            <p className="voice-text">Listening...</p>
+            <p className="voice-text">
+              {voiceText || "Listening..."}
+            </p>
             <button className="voice-cancel" onClick={handleVoiceCancel}>
               ✖
             </button>
@@ -379,23 +512,26 @@ export default function Hero() {
         <div className="main-bottom">
           {uploadedFiles.length > 0 && (
             <div className="preview-area">
-              {uploadedFiles.map((f, i) => (
-                <div className="preview-item" key={i}>
+              {uploadedFiles.map((file, index) => (
+                <div className="preview-item" key={index}>
                   <button
                     className="delete-file-btn"
-                    onClick={() => handleFileDelete(i)}
+                    onClick={() => handleFileDelete(index)}
                     aria-label="Delete file"
                   >
                     ✕
                   </button>
-                  {previewURLs[i] ? (
+                  {previewURLs[index] ? (
                     <img
-                      src={previewURLs[i]}
-                      alt="Preview"
+                      src={previewURLs[index]}
+                      alt={`Preview of ${file.name}`}
                       className="preview-image"
                     />
                   ) : (
-                    <span className="file-name">{f.name}</span>
+                    <div className="file-preview">
+                      <div className="file-icon">{getFileIcon(file.type)}</div>
+                      <span className="file-name">{file.name}</span>
+                    </div>
                   )}
                 </div>
               ))}
@@ -404,19 +540,19 @@ export default function Hero() {
 
           <form onSubmit={handleSubmit} className="search-box">
             <input
+              ref={inputRef}
               type="text"
               onChange={(e) => setInput(e.target.value)}
               value={input}
-              placeholder="Enter a prompt here..."
+              placeholder={uploadedFiles.length > 0 ? "Ask about your files..." : "Enter a prompt here or paste an image..."}
               disabled={loading}
-              required
             />
             <div>
               <input
                 id="fileUpload"
                 type="file"
                 multiple
-                accept="image/*,.pdf,.doc,.docx"
+                accept="image/*,.pdf,.doc,.docx,.txt"
                 style={{ display: "none" }}
                 onChange={handleFileUpload}
               />

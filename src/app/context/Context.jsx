@@ -25,22 +25,47 @@ const ContextProvider = ({ children }) => {
     setShowResult(false);
   };
 
-  const onSent = async (prompt) => {
-    if (!prompt.trim()) return;
-
+  const onSent = async (promptOrFormData) => {
     try {
       setLoading(true);
       setShowResult(true);
       setResultData("");
 
-      setRecentPrompt(prompt);
-      setInput(""); // ⬅️ Clear input instantly when sending
+      let prompt = "";
+      let files = [];
 
-      let response = await runChat(prompt);
+      // Check if it's FormData (with files) or just a string prompt
+      if (promptOrFormData instanceof FormData) {
+        prompt = promptOrFormData.get("prompt");
+        files = promptOrFormData.getAll("files");
+        
+        // Create a display prompt that includes file information
+        const fileNames = files.map(f => f.name).join(", ");
+        const displayPrompt = files.length > 0 
+          ? `${prompt} [Files: ${fileNames}]`
+          : prompt;
+        
+        setRecentPrompt(displayPrompt);
+      } else {
+        // It's a regular string prompt
+        prompt = promptOrFormData;
+        setRecentPrompt(prompt);
+      }
 
-      // ⬅️ Prevent duplicate prompts in Recent
+      if (!prompt?.trim()) return;
+
+      setInput(""); // Clear input instantly when sending
+
+      // Call the updated runChat function with files
+      let response = await runChat(prompt, files);
+
+      // Prevent duplicate prompts in Recent
+      const promptToStore = files.length > 0 
+        ? `${prompt} [${files.length} file(s)]`
+        : prompt;
+      
       setPrevPrompts((prev) =>
-        prev.includes(prompt) ? prev : [...prev, prompt]
+        prev.includes(promptToStore) ? prev : [...prev, promptToStore]
       );
 
       const raw = response;
@@ -54,11 +79,18 @@ const ContextProvider = ({ children }) => {
       const withBreaks = boldFormatted.split("*").join("<br>");
       const finalResponse = withBreaks.split("###").join(bulbIcon);
 
+      // Clear previous result and start typing animation
+      setResultData("");
       finalResponse.split(" ").forEach((word, i) => delayPara(i, word + " "));
 
-      setHistory((prev) => [...prev, { prompt, response: finalResponse }]);
-    } catch {
-      setResultData("An error occurred.");
+      setHistory((prev) => [...prev, { 
+        prompt: promptToStore, 
+        response: finalResponse,
+        files: files.length > 0 ? files.map(f => ({ name: f.name, type: f.type })) : []
+      }]);
+    } catch (error) {
+      console.error("Error in onSent:", error);
+      setResultData("An error occurred while processing your request. Please try again.");
     } finally {
       setLoading(false);
     }
