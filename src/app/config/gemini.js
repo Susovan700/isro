@@ -85,7 +85,6 @@ async function runChat(prompt, files = []) {
   ];
 
   try {
-    // If no files are provided, use regular text chat
     if (!files || files.length === 0) {
       const chat = model.startChat({
         generationConfig,

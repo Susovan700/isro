@@ -3,6 +3,7 @@ import "./hero.css";
 import { useContext, useState, useRef, useEffect } from "react";
 import { Context } from "../../context/Context";
 import Profile from "../profile/profile";
+import ISRO3DMap from "../map/map"; 
 
 export default function Hero() {
   const {
@@ -26,6 +27,7 @@ export default function Hero() {
   const [shareUrl, setShareUrl] = useState("");
   const [linkCopied, setLinkCopied] = useState(false);
   const [pasteNotification, setPasteNotification] = useState(false);
+  const [show3DMap, setShow3DMap] = useState(false); 
 
   const recognitionRef = useRef(null);
   const profileRef = useRef(null);
@@ -299,8 +301,20 @@ export default function Hero() {
   return (
     <div className="main">
       <div className="nav">
-        <p>CHATGPT</p>
+        <p>ISRO CHATBOT</p>
         <div className="nav-actions">
+          
+          <button 
+            className="map-toggle-btn" 
+            onClick={() => setShow3DMap(!show3DMap)}
+            title="Toggle 3D ISRO Map"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+            </svg>
+            {show3DMap ? "Hide Map" : "Show 3D Map"}
+          </button>
+
           {/* Share Button */}
           <div className="share-wrapper">
             <button className="share-btn" onClick={handleShare}>
@@ -341,6 +355,17 @@ export default function Hero() {
                     </svg>
                     New Chat
                   </button>
+                  <button className="menu-item" onClick={() => setShow3DMap(!show3DMap)}>
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="currentColor"
+                    >
+                      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                    </svg>
+                    {show3DMap ? "Hide 3D Map" : "Show 3D Map"}
+                  </button>
                 </div>
               )}
             </div>
@@ -368,6 +393,23 @@ export default function Hero() {
             </svg>
             Image pasted successfully!
           </div>
+        </div>
+      )}
+
+      {/* 3D Map Integration */}
+      {show3DMap && (
+        <div className="map-container">
+          <div className="map-header">
+            <h2>🛰️ ISRO 3D Interactive Map</h2>
+            <button 
+              className="map-close-btn"
+              onClick={() => setShow3DMap(false)}
+              aria-label="Close map"
+            >
+              ✕
+            </button>
+          </div>
+          <ISRO3DMap mapData={{}} />
         </div>
       )}
 
@@ -416,47 +458,50 @@ export default function Hero() {
           <>
             <div className="greet">
               <p>
-                <span>Hello, Dev.</span>
+                <span>Hello, Space Explorer.</span>
               </p>
-              <p>How can I help you today...</p>
+              <p>How can I help you explore ISRO's missions today?</p>
             </div>
 
-            {/* cards */}
+            {/* Updated cards with ISRO-specific content */}
             <div className="cards">
               <div
                 className="card"
                 onClick={() =>
                   setInput(
-                    "Suggest beautiful places to see on an upcoming road trip"
+                    "Tell me about ISRO's recent Mars and Moon missions"
                   )
                 }
               >
-                <p>Suggest beautiful places to see on an upcoming road trip</p>
+                <p>Tell me about ISRO's recent Mars and Moon missions</p>
                 <img src="/compass_icon.png" alt="Compass icon" />
               </div>
               <div
                 className="card"
                 onClick={() =>
-                  setInput("Brainstorm team bonding activities for our work")
+                  setInput("Show me ISRO's upcoming space missions and projects")
                 }
               >
-                <p>Brainstorm team bonding activities for our work</p>
+                <p>Show me ISRO's upcoming space missions and projects</p>
                 <img src="/bulb_icon.png" alt="Bulb icon" />
               </div>
               <div
                 className="card"
                 onClick={() =>
-                  setInput("Briefly summarize the concept urban planning")
+                  setInput("Explain how ISRO's satellite technology works")
                 }
               >
-                <p>Briefly summarize the concept urban planning</p>
+                <p>Explain how ISRO's satellite technology works</p>
                 <img src="/message_icon.png" alt="Message icon" />
               </div>
               <div
                 className="card"
-                onClick={() => setInput("Improve the readability of the code")}
+                onClick={() => {
+                  setInput("Show me the 3D map of ISRO satellites and launch centers");
+                  setShow3DMap(true);
+                }}
               >
-                <p>Improve the readability of the code</p>
+                <p>Show me the 3D map of ISRO satellites and launch centers</p>
                 <img src="/code_icon.png" alt="Code icon" />
               </div>
             </div>
@@ -544,7 +589,7 @@ export default function Hero() {
               type="text"
               onChange={(e) => setInput(e.target.value)}
               value={input}
-              placeholder={uploadedFiles.length > 0 ? "Ask about your files..." : "Enter a prompt here or paste an image..."}
+              placeholder={uploadedFiles.length > 0 ? "Ask about your files..." : "Ask about ISRO missions, satellites, or paste an image..."}
               disabled={loading}
             />
             <div>
@@ -576,6 +621,132 @@ export default function Hero() {
           </form>
         </div>
       </div>
+
+      {/* Additional CSS for the 3D Map Integration */}
+      <style jsx>{`
+        .map-toggle-btn {
+          background: linear-gradient(135deg, #ff6b35, #f7931e);
+          border: none;
+          color: white;
+          padding: 8px 16px;
+          border-radius: 20px;
+          cursor: pointer;
+          font-size: 12px;
+          font-weight: 500;
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          transition: all 0.3s ease;
+          margin-right: 10px;
+        }
+
+        .map-toggle-btn:hover {
+          background: linear-gradient(135deg, #e55a2b, #e8831a);
+          transform: translateY(-1px);
+          box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3);
+        }
+
+        .map-container {
+          position: fixed;
+          top: 80px;
+          left: 20px;
+          right: 20px;
+          bottom: 20px;
+          background: rgba(0, 0, 0, 0.95);
+          border-radius: 16px;
+          z-index: 1000;
+          overflow: hidden;
+          backdrop-filter: blur(10px);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .map-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 20px;
+          background: linear-gradient(135deg, #1a1a2e, #16213e);
+          border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .map-header h2 {
+          color: #ff6b35;
+          margin: 0;
+          font-size: 18px;
+          font-weight: 600;
+        }
+
+        .map-close-btn {
+          background: rgba(255, 255, 255, 0.1);
+          border: none;
+          color: white;
+          width: 32px;
+          height: 32px;
+          border-radius: 50%;
+          cursor: pointer;
+          font-size: 16px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: all 0.3s ease;
+        }
+
+        .map-close-btn:hover {
+          background: rgba(255, 107, 53, 0.8);
+          transform: scale(1.1);
+        }
+
+        @media (max-width: 768px) {
+          .map-container {
+            top: 70px;
+            left: 10px;
+            right: 10px;
+            bottom: 10px;
+          }
+          
+          .map-toggle-btn {
+            padding: 6px 12px;
+            font-size: 11px;
+          }
+          
+          .map-header {
+            padding: 15px;
+          }
+          
+          .map-header h2 {
+            font-size: 16px;
+          }
+        }
+
+        .nav-actions {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+        }
+
+        .menu-item {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          width: 100%;
+          padding: 10px 16px;
+          background: none;
+          border: none;
+          color: #333;
+          cursor: pointer;
+          font-size: 14px;
+          transition: background-color 0.2s ease;
+        }
+
+        .menu-item:hover {
+          background-color: #f5f5f5;
+        }
+
+        .menu-item svg {
+          width: 16px;
+          height: 16px;
+        }
+      `}</style>
     </div>
   );
 }
